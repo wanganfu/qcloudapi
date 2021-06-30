@@ -173,8 +173,6 @@ final class QCloudAPI
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_PROXYPORT, "8866");
-        curl_setopt($ch, CURLOPT_PROXY, "127.0.0.1");
         $output = curl_exec($ch);
         curl_close($ch);
         return $output;
