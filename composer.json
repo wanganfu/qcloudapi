@@ -1,0 +1,26 @@
+{
+    "name": "annon/qcloudapi",
+    "type": "library",
+    "description": "a lite library for qcloud",
+    "keywords": ["api","lite","qcloud","tencent"],
+    "homepage": "https://www.annon.cn",
+    "license": "MulanPSL-2.0",
+    "authors": [
+        {
+            "name": "annon",
+            "email": "1435427137@qq.com",
+            "homepage": "https://www.annon.cn",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=7.0",
+        "ext-curl": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "annon\\": "src/"
+        }
+    }
+}
