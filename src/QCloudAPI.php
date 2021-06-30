@@ -4,40 +4,38 @@ declare(strict_types=1);
 namespace annon;
 
 /**
- * @property string $secretId 密钥ID
- * @property string $secretKey 密钥
- * @property string $service 指定要查询的服务
- * @property string $region 查询区域（可不填）
+ * @property Secret $secret 密钥配置
+ * @property Option $option 配置查询接口
  * Class QCloudAPI
  * @package annon
  */
-class QCloudAPI
+final class QCloudAPI
 {
     private $url = "";
     private $host = "";
     private $action = "";
     private $data = [];
-    private $version = "2017-03-12";
+    private $version = "";
     private $region = "";
     private $service = "";
     private $secretKey = "";
     private $secretId = "";
+    private $timestamp = 0;
 
     /**
      * QCloudAPI constructor.
-     * @param string $secretId
-     * @param string $secretKey
-     * @param string $service
-     * @param string $region
+     * @param Secret $secret
+     * @param Option $option
      */
-    public function __construct(string $secretId, string $secretKey, string $service, string $region = "")
+    public function __construct(Secret $secret, Option $option)
     {
-        $this->service = $service;
-        $this->host = "$service.tencentcloudapi.com";
+        $this->service = $option->service;
+        $this->host = "{$this->service}.tencentcloudapi.com";
         $this->url = "https://{$this->host}";
-        $this->region = $region;
-        $this->secretId = $secretId;
-        $this->secretKey = $secretKey;
+        $this->version = $option->version;
+        $this->region = $option->region;
+        $this->secretId = $secret->secretId;
+        $this->secretKey = $secret->secretKey;
     }
 
     /**
@@ -68,7 +66,13 @@ class QCloudAPI
      */
     public function run(): array
     {
-        $response = $this->send($this->url, $this->requestPayload(), $this->makeHeader(), 30);
+        $this->timestamp = time();
+        $response = $this->send(
+            $this->url,
+            empty($this->data) ? "{}" : json_encode($this->data, JSON_UNESCAPED_UNICODE),
+            $this->makeHeader(),
+            30
+        );
         return json_decode($response, true);
     }
 
@@ -78,17 +82,16 @@ class QCloudAPI
      */
     private function makeHeader(): array
     {
-        $timestamp = time();
         $header = [
-            "Authorization" => $this->authorization($timestamp),
-            "Content-Type" => "application/json; charset=utf-8",
-            "Host" => $this->host,
-            "X-TC-Action" => $this->action,
-            "X-TC-Timestamp" => $timestamp,
-            "X-TC-Version" => $this->version,
+            "Authorization: " . $this->authorization($this->timestamp),
+            "Content-Type: " . "application/json; charset=utf-8",
+            "Host: " . $this->host,
+            "X-TC-Action: " . $this->action,
+            "X-TC-Timestamp: " . $this->timestamp,
+            "X-TC-Version: " . $this->version
         ];
         if (!empty($this->region)) {
-            $header["X-TC-Region"] = $this->region;
+            $header[] = "X-TC-Region: " . $this->region;
         }
         return $header;
     }
@@ -113,7 +116,7 @@ class QCloudAPI
     {
         $credentialScope = "$date/{$this->service}/tc3_request";
         $hashedCanonicalRequest = hash("SHA256", $this->buildRequest());
-        return "TC3-HMAC-SHA256\n$date\n$credentialScope\n$hashedCanonicalRequest";
+        return "TC3-HMAC-SHA256\n{$this->timestamp}\n$credentialScope\n$hashedCanonicalRequest";
     }
 
     /**
@@ -141,9 +144,13 @@ class QCloudAPI
         return "TC3-HMAC-SHA256 Credential={$this->secretId}/$credentialScope, SignedHeaders=content-type;host, Signature={$this->signStr($date)}";
     }
 
+    /**
+     * 生成请求加密字符串
+     * @return string
+     */
     private function requestPayload(): string
     {
-        return hash("SHA256", json_encode($this->data, JSON_UNESCAPED_UNICODE));
+        return hash("SHA256", empty($this->data) ? "{}" : json_encode($this->data, JSON_UNESCAPED_UNICODE));
     }
 
     /**
@@ -166,6 +173,8 @@ class QCloudAPI
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_PROXYPORT, "8866");
+        curl_setopt($ch, CURLOPT_PROXY, "127.0.0.1");
         $output = curl_exec($ch);
         curl_close($ch);
         return $output;
